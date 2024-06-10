@@ -1,4 +1,24 @@
-# Deep Hough Voting for 3D Object Detection in Point Clouds
+# Machine Learning for 3D Geometry
+
+Team member:
+- Petros Pogosian
+- Tatev Tsokolakyan
+- Leonie Wargitsch
+- Ao Gao
+
+## Installation
+First install cuda toolkit.
+```
+cd pointnet2 && python setup.py install
+conda create --name votenet python=3.7 && conda activate votenet
+conda install cudatoolkit=10.0 cudnn=7.3.* tensorflow-gpu=1.14.0
+conda install pytorch=1.1.0 torchvision=0.3.0 cudatoolkit=10.0 -c pytorch
+pip install -r ./requirements.txt
+```
+Test forward pass with: `python ./model/votenet.py`
+
+--- 
+# Original README
 Created by <a href="http://charlesrqi.com" target="_blank">Charles R. Qi</a>, <a href="https://orlitany.github.io/" target="_blank">Or Litany</a>, <a href="http://kaiminghe.com/" target="_blank">Kaiming He</a> and <a href="https://geometry.stanford.edu/member/guibas/" target="_blank">Leonidas Guibas</a> from <a href="https://research.fb.com/category/facebook-ai-research/" target="_blank">Facebook AI Research</a> and <a href="http://www.stanford.edu" target="_blank">Stanford University</a>.
 
 ![teaser](https://github.com/facebookresearch/votenet/blob/master/doc/teaser.jpg)
