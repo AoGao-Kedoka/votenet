@@ -9,11 +9,14 @@ Team member:
 ## Installation
 First install cuda toolkit.
 ```
-cd pointnet2 && python setup.py install
-conda create --name votenet python=3.7 && conda activate votenet
-conda install cudatoolkit=10.0 cudnn=7.3.* tensorflow-gpu=1.14.0
-conda install pytorch=1.1.0 torchvision=0.3.0 cudatoolkit=10.0 -c pytorch
+conda create --name votenet python=3.7
+conda activate votenet
+conda install -c conda-forge cudatoolkit=11.0
+conda install -c conda-forge cudnn=8.0
+conda install pytorch=1.7.0 torchvision=0.8.1 torchaudio=0.7.0 cudatoolkit=11.0 -c pytorch
+conda install tensorflow-gpu=2.4.1
 pip install -r ./requirements.txt
+cd pointnet2 && python setup.py install
 ```
 Test forward pass with: `python ./model/votenet.py`
 
