@@ -115,11 +115,12 @@ class ScannetDetectionDataset(Dataset):
         target_bboxes[0:instance_bboxes.shape[0],:] = instance_bboxes[:,0:6]
         
         # ------------------------------- DATA AUGMENTATION ------------------------------        
-        if self.augment:
+        if augmentation:
             rand_value = random.randint(0, 1000)
             if (rand_value < 3):
-                mixup_lambda = 0.2
                 # mixup is very expensive and requires cpu, so we only perform part of the mixup
+                print("Mixup performed")
+                mixup_lambda = 0.2
                 rand_idx = random.randint(0, len(self.scan_names) - 1)
                 mixup_pointcloud = self.get_item_internal(rand_idx, False)['point_clouds']
                 cost_matrix = np.linalg.norm(point_cloud[:, np.newaxis] - mixup_pointcloud, axis=2)
