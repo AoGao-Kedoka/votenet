@@ -10,8 +10,10 @@ where (cx,cy,cz) is the center point of the box, dx is the x-axis length of the 
 """
 import os
 import sys
+import random
 import numpy as np
 from torch.utils.data import Dataset
+from scipy.optimize import linear_sum_assignment
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(ROOT_DIR)
@@ -73,7 +75,9 @@ class ScannetDetectionDataset(Dataset):
             scan_idx: int scan index in scan_names list
             pcl_color: unused
         """
-        
+        return self.get_item_internal(idx, self.augment)
+
+    def get_item_internal(self, idx, augmentation):
         scan_name = self.scan_names[idx]        
         mesh_vertices = np.load(os.path.join(self.data_path, scan_name)+'_vert.npy')
         instance_labels = np.load(os.path.join(self.data_path, scan_name)+'_ins_label.npy')
@@ -112,21 +116,35 @@ class ScannetDetectionDataset(Dataset):
         
         # ------------------------------- DATA AUGMENTATION ------------------------------        
         if self.augment:
-            if np.random.random() > 0.5:
-                # Flipping along the YZ plane
-                point_cloud[:,0] = -1 * point_cloud[:,0]
-                target_bboxes[:,0] = -1 * target_bboxes[:,0]                
+            rand_value = random.randint(0, 1000)
+            if (rand_value < 3):
+                mixup_lambda = 0.2
+                # mixup is very expensive and requires cpu, so we only perform part of the mixup
+                rand_idx = random.randint(0, len(self.scan_names) - 1)
+                mixup_pointcloud = self.get_item_internal(rand_idx, False)['point_clouds']
+                cost_matrix = np.linalg.norm(point_cloud[:, np.newaxis] - mixup_pointcloud, axis=2)
+                row_ind, col_ind = linear_sum_assignment(cost_matrix)
+                optimal_assignment = list(zip(row_ind, col_ind))
+                new_point_cloud = np.zeros_like(point_cloud)
+                for i, j in optimal_assignment:
+                    new_point_cloud[i] = mixup_lambda * point_cloud[i] + (1 - mixup_lambda) * mixup_pointcloud[j]
+                point_cloud = new_point_cloud
+            else:
+                if np.random.random() > 0.5:
+                    # Flipping along the YZ plane
+                    point_cloud[:,0] = -1 * point_cloud[:,0]
+                    target_bboxes[:,0] = -1 * target_bboxes[:,0]                
                 
-            if np.random.random() > 0.5:
-                # Flipping along the XZ plane
-                point_cloud[:,1] = -1 * point_cloud[:,1]
-                target_bboxes[:,1] = -1 * target_bboxes[:,1]                                
-            
-            # Rotation along up-axis/Z-axis
-            rot_angle = (np.random.random()*np.pi/18) - np.pi/36 # -5 ~ +5 degree
-            rot_mat = pc_util.rotz(rot_angle)
-            point_cloud[:,0:3] = np.dot(point_cloud[:,0:3], np.transpose(rot_mat))
-            target_bboxes = rotate_aligned_boxes(target_bboxes, rot_mat)
+                if np.random.random() > 0.5:
+                    # Flipping along the XZ plane
+                    point_cloud[:,1] = -1 * point_cloud[:,1]
+                    target_bboxes[:,1] = -1 * target_bboxes[:,1]                                
+                
+                # Rotation along up-axis/Z-axis
+                rot_angle = (np.random.random()*np.pi/18) - np.pi/36 # -5 ~ +5 degree
+                rot_mat = pc_util.rotz(rot_angle)
+                point_cloud[:,0:3] = np.dot(point_cloud[:,0:3], np.transpose(rot_mat))
+                target_bboxes = rotate_aligned_boxes(target_bboxes, rot_mat)
 
         # compute votes *AFTER* augmentation
         # generate votes
