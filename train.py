@@ -66,6 +66,7 @@ parser.add_argument('--use_color', action='store_true', help='Use RGB color in i
 parser.add_argument('--use_sunrgbd_v2', action='store_true', help='Use V2 box labels for SUN RGB-D dataset')
 parser.add_argument('--overwrite', action='store_true', help='Overwrite existing log and dump folders.')
 parser.add_argument('--dump_results', action='store_true', help='Dump results.')
+parser.add_argument('--point_mixup', type=bool, default=False, help='Perform PointMixup')
 
 FLAGS = parser.parse_args()
 
@@ -86,12 +87,14 @@ DEFAULT_CHECKPOINT_PATH = os.path.join(LOG_DIR, 'checkpoint.tar')
 CHECKPOINT_PATH = FLAGS.checkpoint_path if FLAGS.checkpoint_path is not None \
     else DEFAULT_CHECKPOINT_PATH
 FLAGS.DUMP_DIR = DUMP_DIR
+POINT_MIXUP = FLAGS.point_mixup
 
 # Adjust value for point mixup
-if NUM_POINT % 128 != 0:
-    diff = NUM_POINT % 128
-    NUM_POINT -= diff 
-    print(f"Adjust num_point to {NUM_POINT}")
+if POINT_MIXUP:
+    if NUM_POINT % 128 != 0:
+        diff = NUM_POINT % 128
+        NUM_POINT -= diff 
+        print(f"Adjust num_point to {NUM_POINT}")
 
 # Prepare LOG_DIR and DUMP_DIR
 if os.path.exists(LOG_DIR) and FLAGS.overwrite:
@@ -139,7 +142,7 @@ elif FLAGS.dataset == 'scannet':
     from model_util_scannet import ScannetDatasetConfig
     DATASET_CONFIG = ScannetDatasetConfig()
     TRAIN_DATASET = ScannetDetectionDataset('train', num_points=NUM_POINT,
-        augment=False,
+        augment=False if POINT_MIXUP else True,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
     TEST_DATASET = ScannetDetectionDataset('val', num_points=NUM_POINT,
         augment=False,
@@ -245,14 +248,15 @@ def train_one_epoch():
         for key in batch_data_label:
             batch_data_label[key] = batch_data_label[key].to(device)
 
-        # Perform Point Mixup
-        rand_idx = random.randint(0, len(TRAIN_DATALOADER.dataset) - 1)
-        mixup_pointcloud_dict = TRAIN_DATALOADER.dataset[rand_idx]
-        mixup_pointcloud = torch.tensor(mixup_pointcloud_dict['point_clouds'], dtype=torch.float32).to(device)
-        mixup_pointcloud = mixup_pointcloud.unsqueeze(0).expand(batch_data_label["point_clouds"].size(0), -1, -1)
-        point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=0.2)
+        if POINT_MIXUP:
+            # Perform Point Mixup
+            rand_idx = random.randint(0, len(TRAIN_DATALOADER.dataset) - 1)
+            mixup_pointcloud_dict = TRAIN_DATALOADER.dataset[rand_idx]
+            mixup_pointcloud = torch.tensor(mixup_pointcloud_dict['point_clouds'], dtype=torch.float32).to(device)
+            mixup_pointcloud = mixup_pointcloud.unsqueeze(0).expand(batch_data_label["point_clouds"].size(0), -1, -1)
+            point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=0.2)
 
-        batch_data_label['point_clouds'] = point_clouds_mixed
+            batch_data_label['point_clouds'] = point_clouds_mixed
 
         # Forward pass
         optimizer.zero_grad()
