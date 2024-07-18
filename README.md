@@ -13,8 +13,11 @@ conda create --name votenet python=3.7
 conda activate votenet
 conda install -c conda-forge cudatoolkit=11.0
 conda install -c conda-forge cudnn=8.0
-conda install pytorch=1.7.0 torchvision=0.8.1 torchaudio=0.7.0 cudatoolkit=11.0 -c pytorch
 conda install tensorflow-gpu=2.4.1
+
+pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.htm
+pip install torch_cluster==1.5.9
+
 pip install -r ./requirements.txt
 cd pointnet2 && python setup.py install
 ```
@@ -26,6 +29,19 @@ Compile the point mixup
 cd emd_
 python setup.py install
 ```
+
+`--point_mixup` to use it
+
+## Minkowski
+Clone the minkowski engine and compile minkowski
+```
+https://github.com/NVIDIA/MinkowskiEngine.git
+cd MinkowskiEngine
+python setup.py install --blas_include_dirs=${CONDA_PREFIX}/include --blas=openblas
+```
+
+`--backbone minkowski` to use it
+
 
 --- 
 # Original README

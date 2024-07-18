@@ -68,9 +68,9 @@ class MinkowskiBackbone(nn.Module):
         end_points['fp2_features'] = extracted_features.permute(0, 2, 1)  # Shape: [B, 256, 1024]
         end_points['fp2_xyz'] = sampled_coords.view(B, self.output_num_points, 3)  # Shape: [B, 1024, 3]
         end_points['fp2_inds'] = torch.arange(self.output_num_points).unsqueeze(0).repeat(B, 1).cuda()  # Shape: [B, 1024]
-        print( end_points['fp2_features'].shape)
-        print( end_points['fp2_xyz'].shape)
-        print( end_points['fp2_inds'].shape)
+        # print( end_points['fp2_features'].shape)
+        # print( end_points['fp2_xyz'].shape)
+        # print( end_points['fp2_inds'].shape)
         return end_points
 
 class Pointnet2Backbone(nn.Module):

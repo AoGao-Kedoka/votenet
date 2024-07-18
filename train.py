@@ -67,6 +67,7 @@ parser.add_argument('--use_sunrgbd_v2', action='store_true', help='Use V2 box la
 parser.add_argument('--overwrite', action='store_true', help='Overwrite existing log and dump folders.')
 parser.add_argument('--dump_results', action='store_true', help='Dump results.')
 parser.add_argument('--point_mixup', type=bool, default=False, help='Perform PointMixup')
+parser.add_argument('--backbone', default='pointnet2', help='Backbone used, pointnet2 or minkowski')
 
 FLAGS = parser.parse_args()
 
@@ -88,6 +89,7 @@ CHECKPOINT_PATH = FLAGS.checkpoint_path if FLAGS.checkpoint_path is not None \
     else DEFAULT_CHECKPOINT_PATH
 FLAGS.DUMP_DIR = DUMP_DIR
 POINT_MIXUP = FLAGS.point_mixup
+BACKBONE = FLAGS.backbone
 
 # Adjust value for point mixup
 if POINT_MIXUP:
@@ -174,7 +176,9 @@ net = Detector(num_class=DATASET_CONFIG.num_class,
                num_proposal=FLAGS.num_target,
                input_feature_dim=num_input_channel,
                vote_factor=FLAGS.vote_factor,
-               sampling=FLAGS.cluster_sampling)
+               sampling=FLAGS.cluster_sampling,
+               backbone=FLAGS.backbone
+               )
 
 if torch.cuda.device_count() > 1:
   log_string("Let's use %d GPUs!" % (torch.cuda.device_count()))

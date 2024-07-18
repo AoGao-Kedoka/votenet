@@ -17,8 +17,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 sys.path.append(BASE_DIR)
 from backbone_module import MinkowskiBackbone
+from backbone_module import Pointnet2Backbone
 from voting_module import VotingModule
-from proposal_module import MinkowskiProposalModule
+from proposal_module import ProposalModule 
 from dump_helper import dump_results
 from loss_helper import get_loss
 
@@ -43,7 +44,7 @@ class VoteNet(nn.Module):
     """
 
     def __init__(self, num_class, num_heading_bin, num_size_cluster, mean_size_arr,
-        input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps'):
+        input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps', backbone='pointnet2'):
         super().__init__()
         print("votenet")
         self.num_class = num_class
@@ -58,13 +59,18 @@ class VoteNet(nn.Module):
 
         # Backbone point feature learning
         print(self.input_feature_dim)
-        self.backbone_net = MinkowskiBackbone(input_feature_dim=self.input_feature_dim)
+
+        self.backbone_net = Pointnet2Backbone(input_feature_dim=self.input_feature_dim)
+        if (backbone== 'minkowski'):
+            self.backbone_net = MinkowskiBackbone(input_feature_dim=self.input_feature_dim)
+            print("MinkowskiBackbone used!")
+
 
         # Hough voting
         self.vgen = VotingModule(self.vote_factor, 256)
 
         # Vote aggregation and detection
-        self.pnet = MinkowskiProposalModule(num_class, num_heading_bin, num_size_cluster, mean_size_arr, num_proposal, sampling)
+        self.pnet = ProposalModule(num_class, num_heading_bin, num_size_cluster, mean_size_arr, num_proposal, sampling)
 
     def forward(self, inputs):
         """ Forward pass of the network
@@ -81,10 +87,10 @@ class VoteNet(nn.Module):
         Returns:
             end_points: dict
         """
-        print("forward")
+        # print("forward")
         end_points = {}
         batch_size = inputs['point_clouds'].shape[0]
-        print(inputs['point_clouds'].shape)
+        # print(inputs['point_clouds'].shape)
         end_points = self.backbone_net(inputs['point_clouds'], end_points)
                 
         # --------- HOUGH VOTING ---------
@@ -93,7 +99,7 @@ class VoteNet(nn.Module):
         end_points['seed_inds'] = end_points['fp2_inds']
         end_points['seed_xyz'] = xyz
         end_points['seed_features'] = features
-        print("end of backbone")
+        # print("end of backbone")
         xyz, features = self.vgen(xyz, features)
         features_norm = torch.norm(features, p=2, dim=1)
         features = features.div(features_norm.unsqueeze(1))

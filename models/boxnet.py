@@ -37,7 +37,7 @@ class BoxNet(nn.Module):
     """
 
     def __init__(self, num_class, num_heading_bin, num_size_cluster, mean_size_arr,
-        input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps'):
+        input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps', backbone='pointnet2'):
         super().__init__()
 
         self.num_class = num_class
