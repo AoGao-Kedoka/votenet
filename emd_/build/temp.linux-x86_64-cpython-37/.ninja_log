@@ -1,0 +1,4 @@
+# ninja log v5
+1	9688	1720307594268426300	/mnt/d/Projects/Univeristy/ML3D/votenet/emd_/build/temp.linux-x86_64-cpython-37/emd/emd.o	4edd689ec9a7ec81
+2	5051	1720307657805005900	/mnt/d/Projects/Univeristy/ML3D/votenet/emd_/build/temp.linux-x86_64-cpython-37/emd/emd_cuda.o	ba79566683116612
+2	10645	1720307663385273600	/mnt/d/Projects/Univeristy/ML3D/votenet/emd_/build/temp.linux-x86_64-cpython-37/emd/emd.o	cab093ed4258d0d3
