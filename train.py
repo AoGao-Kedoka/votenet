@@ -67,6 +67,7 @@ parser.add_argument('--use_sunrgbd_v2', action='store_true', help='Use V2 box la
 parser.add_argument('--overwrite', action='store_true', help='Overwrite existing log and dump folders.')
 parser.add_argument('--dump_results', action='store_true', help='Dump results.')
 parser.add_argument('--point_mixup', type=bool, default=False, help='Perform PointMixup')
+parser.add_argument('--point_mixup_rate', type=int, default=0.07, help='PointMixup rate')
 parser.add_argument('--backbone', default='pointnet2', help='Backbone used, pointnet2 or minkowski')
 
 FLAGS = parser.parse_args()
@@ -144,7 +145,7 @@ elif FLAGS.dataset == 'scannet':
     from model_util_scannet import ScannetDatasetConfig
     DATASET_CONFIG = ScannetDatasetConfig()
     TRAIN_DATASET = ScannetDetectionDataset('train', num_points=NUM_POINT,
-        augment=False if POINT_MIXUP else True,
+        augment=True,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
     TEST_DATASET = ScannetDetectionDataset('val', num_points=NUM_POINT,
         augment=False,
@@ -258,7 +259,7 @@ def train_one_epoch():
             mixup_pointcloud_dict = TRAIN_DATALOADER.dataset[rand_idx]
             mixup_pointcloud = torch.tensor(mixup_pointcloud_dict['point_clouds'], dtype=torch.float32).to(device)
             mixup_pointcloud = mixup_pointcloud.unsqueeze(0).expand(batch_data_label["point_clouds"].size(0), -1, -1)
-            point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=0.2)
+            point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=FLAGS.point_mixup_rate)
 
             batch_data_label['point_clouds'] = point_clouds_mixed
 
