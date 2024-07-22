@@ -7,7 +7,7 @@ Team member:
 - Ao Gao
 
 
-##Branch specifical stuff
+## Branch specifical stuff
 Also separately need to download the pretrained model (checkpoint-ep400.pth)
 from here: https://github.com/facebookresearch/DepthContrast?tab=readme-ov-file
 
