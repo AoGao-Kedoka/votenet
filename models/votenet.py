@@ -44,7 +44,7 @@ class VoteNet(nn.Module):
     """
 
     def __init__(self, num_class, num_heading_bin, num_size_cluster, mean_size_arr,
-                 input_feature_dim=0, num_proposal=128, vote_factor=1, sampling='vote_fps', scale=1):
+        input_feature_dim=1, num_proposal=128, vote_factor=1, sampling='vote_fps', scale = 1):
         super().__init__()
 
         self.num_class = num_class
@@ -62,14 +62,14 @@ class VoteNet(nn.Module):
 
         # Hough voting
         if scale <= 2:
-            self.vgen = VotingModule(self.vote_factor, 512)
+            self.vgen = VotingModule(self.vote_factor, 256)
         else:
             self.vgen = VotingModule(self.vote_factor, 256*scale)
 
         # Vote aggregation and detection
         if scale <= 2:
             self.pnet = ProposalModule(num_class, num_heading_bin, num_size_cluster,
-                                       mean_size_arr, num_proposal, sampling, seed_feat_dim=512)
+                                       mean_size_arr, num_proposal, sampling, seed_feat_dim=256)
         else:
             self.pnet = ProposalModule(num_class, num_heading_bin, num_size_cluster,
                                        mean_size_arr, num_proposal, sampling, seed_feat_dim=256*scale)

@@ -30,14 +30,17 @@ class Pointnet2Backbone(nn.Module):
             Number of input channels in the feature descriptor for each point.
             e.g. 3 for RGB.
     """
-    def __init__(self, input_feature_dim=0, SCALE=1):
+    def __init__(self, input_feature_dim = 1, SCALE=1):
         super().__init__()
         
+        self.input_feature_dim = input_feature_dim
+
+
         self.sa1 = PointnetSAModuleVotes(
                 npoint=2048,
                 radius=0.2,
                 nsample=64,
-                mlp=[0, 64*SCALE, 64*SCALE, 128*SCALE],
+                mlp=[1, 64*SCALE, 64*SCALE, 128*SCALE],
                 use_xyz=True,
                 normalize_xyz=True
             )
@@ -46,7 +49,7 @@ class Pointnet2Backbone(nn.Module):
                 npoint=1024,
                 radius=0.4,
                 nsample=32,
-                mlp=[128*SCALE, 128*SCALE, 128*SCALE, 256*SCALE],
+                mlp=[128, 128 * SCALE, 128 * SCALE, 256 * SCALE],
                 use_xyz=True,
                 normalize_xyz=True
             )
@@ -55,7 +58,7 @@ class Pointnet2Backbone(nn.Module):
                 npoint=512,
                 radius=0.8,
                 nsample=16,
-                mlp=[256*SCALE, 128*SCALE, 128*SCALE, 256*SCALE],
+                mlp=[256, 128 * SCALE, 128 * SCALE, 256 * SCALE],
                 use_xyz=True,
                 normalize_xyz=True
             )
@@ -64,14 +67,14 @@ class Pointnet2Backbone(nn.Module):
                 npoint=256,
                 radius=1.2,
                 nsample=16,
-                mlp=[256*SCALE, 128*SCALE, 128*SCALE, 256*SCALE],
+                mlp=[256, 128 * SCALE, 128 * SCALE, 256 * SCALE],
                 use_xyz=True,
                 normalize_xyz=True
             )
 
         if SCALE == 1:
-            self.fp1 = PointnetFPModule(mlp=[256+256,512,512])
-            self.fp2 = PointnetFPModule(mlp=[512+256,512,512])
+            self.fp1 = PointnetFPModule(mlp=[256+256,256,256])
+            self.fp2 = PointnetFPModule(mlp=[512,256,256])
         else:
             self.fp1 = PointnetFPModule(mlp=[256*SCALE+256*SCALE,256*SCALE,256*SCALE])
             self.fp2 = PointnetFPModule(mlp=[256*SCALE+256*SCALE,256*SCALE,256*SCALE])
