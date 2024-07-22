@@ -136,7 +136,7 @@ elif FLAGS.dataset == 'scannet':
     DATASET_CONFIG = ScannetDatasetConfig()
     TRAIN_DATASET = ScannetDetectionDataset('train', num_points=NUM_POINT,
         augment=True,
-        use_color=FLAGS.use_color, use_height=(not FLAGS.no_height), scan_idx_list=FLAGS.scan_idx)
+        use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
     TEST_DATASET = ScannetDetectionDataset('val', num_points=NUM_POINT,
         augment=False,
         use_color=FLAGS.use_color, use_height=(not FLAGS.no_height))
@@ -204,7 +204,7 @@ if CHECKPOINT_PATH is not None and os.path.isfile(CHECKPOINT_PATH):
     net.load_state_dict(checkpoint['model_state_dict'])
     ### Careful with loading optimizer parameter
     ### May need to move this block later
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    
     start_epoch = checkpoint['epoch']
     log_string("-> loaded checkpoint %s (epoch: %d)"%(CHECKPOINT_PATH, start_epoch))
 
@@ -218,7 +218,8 @@ criterion = MODEL.get_loss
 
 # Load the Adam optimizer
 optimizer = optim.Adam(net.parameters(), lr=BASE_LEARNING_RATE, weight_decay=FLAGS.weight_decay)
-
+if CHECKPOINT_PATH is not None and os.path.isfile(CHECKPOINT_PATH):
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 # Decay Batchnorm momentum from 0.5 to 0.999
 # note: pytorch's BN momentum (default 0.1)= 1 - tensorflow's BN momentum
 BN_MOMENTUM_INIT = 0.5
