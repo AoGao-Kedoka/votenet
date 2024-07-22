@@ -6,6 +6,14 @@ Team member:
 - Leonie Wargitsch
 - Ao Gao
 
+
+#Branch specifical stuff
+Also separately need to download the pretrained model (checkpoint-ep400.pth)
+from here: https://github.com/facebookresearch/DepthContrast?tab=readme-ov-file
+
+
+
+
 ## Installation
 First install cuda toolkit.
 ```
