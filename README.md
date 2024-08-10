@@ -14,8 +14,9 @@ conda activate votenet
 conda install -c conda-forge cudatoolkit=11.0
 conda install -c conda-forge cudnn=8.0
 conda install tensorflow-gpu=2.4.1
+conda install -c conda-forge cudatoolkit-dev -y
 
-pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.htm
+pip install torch==1.9.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
 pip install torch_cluster==1.5.9
 
 pip install -r ./requirements.txt
@@ -41,6 +42,20 @@ python setup.py install --blas_include_dirs=${CONDA_PREFIX}/include --blas=openb
 ```
 
 `--backbone minkowski` to use it
+
+# Visualization
+1. Update coordinate system of the ground truth scans with:
+    ```
+    python3 scannet/rotate_val_scans.py
+    ```
+2. Create evaluation dump files
+    ```
+    python eval.py --dataset scannet --checkpoint_path log_scannet/checkpoint.tar --dump_dir eval_scannet --num_point 40000 --cluster_sampling seed_fps --use_3d_nms --use_cls_nms --per_class_proposal
+    ```
+3. Visualise, e.g:
+    - open 'scene0568_00_vh_clean_2.py', '000000_gt_bbox', '0000_pred_confident_nms_bbox' in meshlab 
+    - change *_pred_confident_nms_bbox to wireframe mode, then in meshlab: filter-> polygonal and Quad Mesh -> Turn into Quad-Dominant mesh -> Apply
+    - change color of the wireframe
 
 
 --- 

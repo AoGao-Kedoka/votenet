@@ -32,6 +32,7 @@ from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from emd_ import emd_module
 EMD = emd_module.emdModule()
+from checkpoint import init_model_from_weights
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -67,8 +68,8 @@ parser.add_argument('--use_sunrgbd_v2', action='store_true', help='Use V2 box la
 parser.add_argument('--overwrite', action='store_true', help='Overwrite existing log and dump folders.')
 parser.add_argument('--dump_results', action='store_true', help='Dump results.')
 parser.add_argument('--point_mixup', type=bool, default=False, help='Perform PointMixup')
-parser.add_argument('--point_mixup_rate', type=int, default=0.07, help='PointMixup rate')
 parser.add_argument('--backbone', default='pointnet2', help='Backbone used, pointnet2 or minkowski')
+parser.add_argument("--pre_checkpoint_path", default=None, help = "Model pretrained weight path")
 
 FLAGS = parser.parse_args()
 
@@ -91,6 +92,7 @@ CHECKPOINT_PATH = FLAGS.checkpoint_path if FLAGS.checkpoint_path is not None \
 FLAGS.DUMP_DIR = DUMP_DIR
 POINT_MIXUP = FLAGS.point_mixup
 BACKBONE = FLAGS.backbone
+PRE_CHECKPOINT_PATH = FLAGS.pre_checkpoint_path
 
 # Adjust value for point mixup
 if POINT_MIXUP:
@@ -163,6 +165,7 @@ print(len(TRAIN_DATALOADER), len(TEST_DATALOADER))
 # Init the model and optimzier
 MODEL = importlib.import_module(FLAGS.model) # import network module
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(f"Training on device {device}")
 num_input_channel = int(FLAGS.use_color)*3 + int(not FLAGS.no_height)*1
 
 if FLAGS.model == 'boxnet':
@@ -181,6 +184,22 @@ net = Detector(num_class=DATASET_CONFIG.num_class,
                backbone=FLAGS.backbone
                )
 
+# load checkpoint
+it = -1 # for the initialize value of `LambdaLR` and `BNMomentumScheduler`
+start_epoch = 0
+if PRE_CHECKPOINT_PATH is not None and os.path.isfile(PRE_CHECKPOINT_PATH):
+    print(f"Load model weights from {PRE_CHECKPOINT_PATH}")
+    precheckpoint = torch.load(PRE_CHECKPOINT_PATH)
+    init_model_from_weights(net, precheckpoint)
+    
+if CHECKPOINT_PATH is not None and os.path.isfile(CHECKPOINT_PATH):
+    checkpoint = torch.load(CHECKPOINT_PATH)
+    net.load_state_dict(checkpoint['model_state_dict'])
+    ### Careful with loading optimizer parameter
+    ### May need to move this block later
+    start_epoch = checkpoint['epoch']
+    log_string("-> loaded checkpoint %s (epoch: %d)"%(CHECKPOINT_PATH, start_epoch))
+
 if torch.cuda.device_count() > 1:
   log_string("Let's use %d GPUs!" % (torch.cuda.device_count()))
   # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
@@ -190,6 +209,9 @@ criterion = MODEL.get_loss
 
 # Load the Adam optimizer
 optimizer = optim.Adam(net.parameters(), lr=BASE_LEARNING_RATE, weight_decay=FLAGS.weight_decay)
+
+if CHECKPOINT_PATH is not None and os.path.isfile(CHECKPOINT_PATH):
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 # Load checkpoint if there is any
 it = -1 # for the initialize value of `LambdaLR` and `BNMomentumScheduler`
@@ -244,7 +266,7 @@ def mixup_augmentation(xyz, xyz_minor, mix_rate=0.2):
     xyz = xyz * (1 - mix_rate_expand_xyz) + xyz_minor_new * mix_rate_expand_xyz
     return xyz
 
-def train_one_epoch():
+def train_one_epoch(epoch):
     stat_dict = {} # collect statistics
     adjust_learning_rate(optimizer, EPOCH_CNT)
     bnm_scheduler.step() # decay BN momentum
@@ -259,7 +281,7 @@ def train_one_epoch():
             mixup_pointcloud_dict = TRAIN_DATALOADER.dataset[rand_idx]
             mixup_pointcloud = torch.tensor(mixup_pointcloud_dict['point_clouds'], dtype=torch.float32).to(device)
             mixup_pointcloud = mixup_pointcloud.unsqueeze(0).expand(batch_data_label["point_clouds"].size(0), -1, -1)
-            point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=FLAGS.point_mixup_rate)
+            point_clouds_mixed = mixup_augmentation(batch_data_label["point_clouds"], mixup_pointcloud, mix_rate=get_current_lr(epoch))
 
             batch_data_label['point_clouds'] = point_clouds_mixed
 
@@ -355,7 +377,7 @@ def train(start_epoch):
         # Reset numpy seed.
         # REF: https://github.com/pytorch/pytorch/issues/5059
         np.random.seed()
-        train_one_epoch()
+        train_one_epoch(epoch)
         if EPOCH_CNT == 0 or EPOCH_CNT % 10 == 9: # Eval every 10 epochs
             loss = evaluate_one_epoch()
         # Save checkpoint

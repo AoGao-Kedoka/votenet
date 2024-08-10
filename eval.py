@@ -189,6 +189,9 @@ def eval():
     # REF: https://github.com/pytorch/pytorch/issues/5059
     np.random.seed()
     loss = evaluate_one_epoch()
+    print("scan names in dataloader")
+    for i in enumerate(TEST_DATALOADER.dataset.scan_names):
+        print(i)
 
 if __name__=='__main__':
     eval()

@@ -1,5 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/torch_stable.htm
 matplotlib
 opencv-python==4.3.0.36
 plyfile
 trimesh>=2.35.39,<2.35.40
 networkx>=2.2,<2.3
+torch==1.9.0+cu102 
+torch_cluster==1.5.9
