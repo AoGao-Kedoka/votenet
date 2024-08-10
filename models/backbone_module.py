@@ -25,12 +25,18 @@ class MinkowskiBackbone(nn.Module):
         super().__init__()
         self.voxel_size = 0.000001
         self.output_feature_dim = 256
-        self.output_num_points = 1024
-        self.initial_subsample = 1024
+        self.output_num_points = 1024 * 8
         self.conv1 = ME.MinkowskiConvolution(in_channels=input_feature_dim, out_channels=64, kernel_size=3, stride=2, dimension=3)
+        self.bn1 = ME.MinkowskiBatchNorm(64)
         self.conv2 = ME.MinkowskiConvolution(in_channels=64, out_channels=128, kernel_size=3, stride=2, dimension=3)
+        self.bn2 = ME.MinkowskiBatchNorm(128)
         self.conv3 = ME.MinkowskiConvolution(in_channels=128, out_channels=256, kernel_size=3, stride=2, dimension=3)
+        self.bn3 = ME.MinkowskiBatchNorm(256)
         self.conv4 = ME.MinkowskiConvolution(in_channels=256, out_channels=256, kernel_size=3, stride=2, dimension=3) 
+        self.bn4 = ME.MinkowskiBatchNorm(256)
+        self.relu = ME.MinkowskiReLU()
+        print(f"Inputfeature: {input_feature_dim}")
+
     def forward(self,  pointcloud: torch.cuda.FloatTensor, end_points=None):
         if not end_points: end_points = {}
         sampled_indices = []
@@ -57,20 +63,27 @@ class MinkowskiBackbone(nn.Module):
         )
 
         # Pass through Minkowski convolutions
-        x1 = self.conv1(input_sparse_tensor)
-        x2 = self.conv2(x1)
-        x3 = self.conv3(x2)
-        x4 = self.conv4(x3)
+        x = self.conv1(input_sparse_tensor)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.relu(x)
+        x = self.conv3(x)
+        x = self.relu(x)
+        x = self.conv4(x)
+        x = self.relu(x)
 
         # Extract features after convolutions
-        extracted_features = x4.F.view(B, self.output_num_points, 256)  # Shape: [B, 1024, 256]
+        extracted_features = x.F.view(B, self.output_num_points, 256)  # Shape: [B, N, 256]
+        _, indices = torch.topk(extracted_features, 1024, dim=1)
+        indices_flat = indices.view(-1, 256)  # Reshape to (8*10, 256)
+        gathered_features = torch.gather(x.F, 0, indices_flat)
+        gathered_features = gathered_features.view(B, 1024, 256)
+        reduced_indices = indices_flat[:, 0]  # Shape is (n,)
+        gathered_coords = sampled_coords[reduced_indices, :].view(B, 1024, 3)
 
-        end_points['fp2_features'] = extracted_features.permute(0, 2, 1)  # Shape: [B, 256, 1024]
-        end_points['fp2_xyz'] = sampled_coords.view(B, self.output_num_points, 3)  # Shape: [B, 1024, 3]
-        end_points['fp2_inds'] = torch.arange(self.output_num_points).unsqueeze(0).repeat(B, 1).cuda()  # Shape: [B, 1024]
-        # print( end_points['fp2_features'].shape)
-        # print( end_points['fp2_xyz'].shape)
-        # print( end_points['fp2_inds'].shape)
+        end_points['fp2_features'] = gathered_features.permute(0, 2, 1)  # Shape: [B, 256, 1024]
+        end_points['fp2_xyz'] = gathered_coords
+        end_points['fp2_inds'] = torch.arange(1024).unsqueeze(0).repeat(B, 1).cuda()  # Shape: [B, 1024]
         return end_points
 
 class Pointnet2Backbone(nn.Module):
